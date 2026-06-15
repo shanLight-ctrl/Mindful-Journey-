@@ -54,16 +54,17 @@ export default function App() {
 
   useEffect(() => {
     checkBackend().then(setBackendReady)
-    warmModel() // pre-train TF.js model in background
   }, [])
 
-  const apiKeyMissing = backendReady && !backendReady.configured
+  // No API key required — server uses local ML only
+  const apiKeyMissing = false
 
   function handleWorldSelect(w) {
     setWorld(w)
     setHoverTheme(null)
     setScreen('welcome')
     playWorld(w.id)
+    warmModel() // start TF.js training now, finishes before game begins
   }
 
   function handleMoodSelect(mood) {

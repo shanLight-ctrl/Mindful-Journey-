@@ -16,47 +16,44 @@ function renderMarkdown(text) {
   })
 }
 
+// Uses requestAnimationFrame instead of setInterval so React renders at 60fps
+// max (not 125+), keeping the UI thread smooth.
 export default function Typewriter({ text, speed = 28, onComplete, className = '' }) {
   const [charCount, setCharCount] = useState(0)
   const [done, setDone] = useState(false)
-  const skipRef = useRef(false)
+  const rafRef = useRef(null)
+  const startRef = useRef(null)
   const onCompleteRef = useRef(onComplete)
-
-  // Keep ref up-to-date without triggering re-renders
   onCompleteRef.current = onComplete
 
   useEffect(() => {
-    skipRef.current = false
     setCharCount(0)
     setDone(false)
+    startRef.current = null
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
 
-    let index = 0
-    const timer = setInterval(() => {
-      index += 1
-      setCharCount(index)
-      if (index >= text.length) {
-        clearInterval(timer)
-        setDone(true)
-      }
-    }, speed)
+    function tick(ts) {
+      if (!startRef.current) startRef.current = ts
+      const target = Math.min(Math.floor((ts - startRef.current) / speed), text.length)
+      setCharCount(target)
+      if (target >= text.length) { setDone(true); return }
+      rafRef.current = requestAnimationFrame(tick)
+    }
 
-    return () => clearInterval(timer)
+    rafRef.current = requestAnimationFrame(tick)
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current) }
   }, [text, speed])
 
-  // Fire onComplete after done flips true — safely outside render
   useEffect(() => {
     if (done) onCompleteRef.current?.()
   }, [done])
 
-  const handleClick = () => {
-    if (!done && !skipRef.current) {
-      skipRef.current = true
-      setCharCount(text.length)
-      setDone(true)
-    }
+  function handleClick() {
+    if (done) return
+    if (rafRef.current) cancelAnimationFrame(rafRef.current)
+    setCharCount(text.length)
+    setDone(true)
   }
-
-  const displayed = text.slice(0, charCount)
 
   return (
     <span
@@ -65,7 +62,7 @@ export default function Typewriter({ text, speed = 28, onComplete, className = '
       style={{ cursor: done ? 'default' : 'pointer' }}
       title={done ? '' : 'Click to skip'}
     >
-      {renderMarkdown(displayed)}
+      {renderMarkdown(text.slice(0, charCount))}
       {!done && <span className="cursor" />}
     </span>
   )

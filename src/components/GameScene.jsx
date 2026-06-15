@@ -165,7 +165,7 @@ export default function GameScene({ sessionId, moodBefore, world, onComplete, on
             <Typewriter
               key={`scene-${sceneNumber}-${captionKey}`}
               text={sceneText}
-              speed={8}
+              speed={4}
               onComplete={handleTextDone}
             />
           )}
