@@ -32,37 +32,34 @@ export default function GameScene({ sessionId, moodBefore, world, onComplete, on
 
     const newEmotions = [...emotionHistoryRef.current, choice.emotion]
     emotionHistoryRef.current = newEmotions
+    const nextNum = sceneNumber + 1
 
-    // Live ML prediction — fire-and-forget, never blocks the story
+    // Fire scene fetch and ML prediction in parallel, before the animation ends
     predictMood(newEmotions, moodBefore)
       .then(p => setMlPrediction(p))
       .catch(() => {})
 
     saveChoice(sessionId, sceneNumber, choice.text, choice.emotion)
 
+    const scenePromise = getNextScene(
+      nextNum,
+      choice.text,
+      convHistoryRef.current,
+      moodBefore,
+      newEmotions,
+      world.context,
+      sessionId,
+    )
+
+    // Wait for exit animation, then apply result immediately — no loading spinner
     await new Promise(r => setTimeout(r, 380))
 
-    setPhase('loading')
     setError('')
     setChoicesExiting(false)
     setPickedIndex(null)
 
-    const nextNum = sceneNumber + 1
-
     try {
-      const result = await getNextScene(
-        nextNum,
-        choice.text,
-        convHistoryRef.current,
-        moodBefore,
-        newEmotions,
-        world.context,
-        sessionId,
-      )
-
-      if (result.agent_insight?.reasoning) {
-        setAgentInsight(result.agent_insight)
-      }
+      const result = await scenePromise
 
       convHistoryRef.current = [
         ...convHistoryRef.current,
@@ -78,7 +75,7 @@ export default function GameScene({ sessionId, moodBefore, world, onComplete, on
       setPhase('reading')
     } catch (err) {
       console.error(err)
-      setError('Something went wrong generating the next scene. Please try again.')
+      setError('Something went wrong. Please try again.')
       setPhase('choices')
     }
   }

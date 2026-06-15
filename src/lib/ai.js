@@ -1,10 +1,10 @@
-// All AI features run client-side — no API key, no backend, no server needed.
+// Zero network calls — everything runs in the browser.
 //
-// Mood inference  → NRC + AFINN lexicons (ml.js)
-// Scene selection → pre-written branches in storyBranches.js
+// Mood inference  → NRC + AFINN lexicons  (ml.js, instant)
+// Scene selection → pre-written branches  (storyBranches.js, instant)
 // Companion msgs  → ML dominant emotion picks the most resonant line per scene
-// Endings         → dominant game emotion (brave / reflective / avoidant) picks the arc
-// ML prediction   → TF.js neural net trained in-browser on GoEmotions patterns
+// Endings         → dominant game emotion arc (brave / reflective / avoidant)
+// ML prediction   → TF.js on WebGL — faster than server-side Node.js
 
 import {
   analyzeEmotionProfile,
@@ -19,18 +19,18 @@ import {
 
 import { MOOD_RESPONSES, GREETINGS, SCENES, ENDINGS } from '../data/storyBranches.js'
 
-// ── Re-exports (already fully client-side in ml.js) ────────────────────────────
+// ── Re-exports (client-side ML, no server needed) ─────────────────────────────
 export { analyzeEmotionProfile, recommendGenre, analyzeSentiment, warmModel, PLUTCHIK }
 export { mlPredictMood as predictMood }
 
-// ── Backend stub — always healthy ──────────────────────────────────────────────
+// ── Backend stub — always returns healthy so no error banners show ─────────────
 export function checkBackend() {
-  return Promise.resolve({ ok: true, configured: true })
+  return Promise.resolve({ ok: true, configured: true, mode: 'client-only' })
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-export function getDominantEmotion(history) {
+export function getDominantEmotion(history = []) {
   if (!history.length) return 'reflective'
   const counts = {}
   history.forEach(e => { counts[e] = (counts[e] || 0) + 1 })
@@ -46,8 +46,8 @@ function detectWorldId(worldContext = '') {
   return 'forest'
 }
 
-// Pick the companion message that best matches the player's current emotion state.
-// Tries: game emotion → Plutchik mapping → mood-level fallback → default.
+// Picks the companion message that best matches the player's current emotion.
+// Priority: game emotion → Plutchik equivalent → mood-level fallback → default.
 function pickCompanion(scene, emotionHistory, moodBefore) {
   const dominant = getDominantEmotion(emotionHistory)
   const toPlutchik = {
@@ -63,8 +63,8 @@ function pickCompanion(scene, emotionHistory, moodBefore) {
   return c.default
 }
 
-// ── Mood inference ─────────────────────────────────────────────────────────────
-export async function inferMoodFromWords(userWords, phase = 'arrival') {
+// ── Mood inference — runs NRC + AFINN in the browser, picks template ───────────
+export async function inferMoodFromWords(userWords, _phase = 'arrival') {
   const profile = analyzeEmotionProfile(userWords)
   const LABELS = ['', 'Rough', 'Low', 'Okay', 'Good', 'Great']
   const mood_value = profile.mood
@@ -80,7 +80,7 @@ export async function getWelcomeGreeting(_moodLabel, moodValue) {
   return GREETINGS[moodValue] ?? GREETINGS[3]
 }
 
-// ── Scene generation ───────────────────────────────────────────────────────────
+// ── Scene — instant lookup, no spinner needed ──────────────────────────────────
 export async function getNextScene(
   sceneNumber,
   _playerChoice,
@@ -93,8 +93,8 @@ export async function getNextScene(
   const worldId = detectWorldId(worldContext)
   const worldScenes = SCENES[worldId] ?? SCENES.forest
   // sceneNumber 2 → index 0, 3 → index 1, 4 → index 2
-  const idx = Math.min(sceneNumber - 2, worldScenes.length - 1)
-  const scene = worldScenes[Math.max(0, idx)]
+  const idx = Math.max(0, Math.min(sceneNumber - 2, worldScenes.length - 1))
+  const scene = worldScenes[idx]
   return {
     scene: scene.scene,
     companion_message: pickCompanion(scene, emotionHistory, moodBefore),
@@ -104,7 +104,7 @@ export async function getNextScene(
   }
 }
 
-// ── Ending generation ──────────────────────────────────────────────────────────
+// ── Ending — instant lookup ────────────────────────────────────────────────────
 export async function getEnding(emotionHistory, _moodBefore, _conversationHistory, worldContext = '') {
   const worldId = detectWorldId(worldContext)
   const worldEndings = ENDINGS[worldId] ?? ENDINGS.forest
