@@ -235,6 +235,22 @@ async function buildAndTrain() {
     ],
   })
   model.compile({ optimizer: tf.train.adam(0.001), loss: 'meanSquaredError', metrics: ['mae'] })
+
+  // Try loading pre-trained weights from the backend build step first.
+  // This is instant (~50ms) vs in-browser training (~8-10 seconds).
+  try {
+    const res = await fetch('/ml-weights.json')
+    if (res.ok) {
+      const { weights } = await res.json()
+      const tensors = weights.map(w => tf.tensor(w.data, w.shape))
+      model.setWeights(tensors)
+      tensors.forEach(t => t.dispose())
+      modelReady = true
+      return model
+    }
+  } catch (_) {}
+
+  // Fallback: train in-browser if weights file not found (local dev without running npm run train)
   const { x, y } = generateTrainingData(1500)
   await model.fit(x, y, { epochs: 50, batchSize: 32, shuffle: true, validationSplit: 0.1, verbose: 0 })
   x.dispose(); y.dispose()

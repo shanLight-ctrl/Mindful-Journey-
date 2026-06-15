@@ -11,7 +11,7 @@ import ProgressRail from './components/ui/ProgressRail'
 import { MOOD_THEMES } from './data/story'
 import { EMOTION_META } from './lib/emotions'
 import { createSession } from './lib/supabase'
-import { checkBackend, warmModel } from './lib/ai'
+import { checkBackend } from './lib/ai'
 import MusicToggle from './components/ui/MusicToggle'
 import { playWorld, stopMusic, setEmotion } from './lib/audio'
 
@@ -64,7 +64,6 @@ export default function App() {
     setHoverTheme(null)
     setScreen('welcome')
     playWorld(w.id)
-    warmModel() // start TF.js training now, finishes before game begins
   }
 
   function handleMoodSelect(mood) {

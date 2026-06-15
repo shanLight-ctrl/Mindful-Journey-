@@ -7,6 +7,7 @@
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "node --watch server/index.js",
+    "train": "node scripts/train.js",
     "build": "vite build",
     "preview": "vite preview",
     "start": "node server/index.js"
@@ -22,6 +23,7 @@
     "recharts": "^2.12.0"
   },
   "devDependencies": {
+    "@tensorflow/tfjs-node": "^4.22.0",
     "@vitejs/plugin-react": "^4.3.0",
     "concurrently": "^9.1.2",
     "vite": "^5.3.0"
