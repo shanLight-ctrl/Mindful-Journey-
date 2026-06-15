@@ -50,9 +50,6 @@ export default function WelcomeScreen({ world, onBegin, onMoodSelect, onGenreRec
         'Thank you for sharing that. Whatever you are carrying, there is room for it here. When you are ready, we can begin your story together.',
       )
       setStep(3)
-      if (err.message?.includes('API_KEY') || err.message?.includes('story server')) {
-        setError('AI unavailable — check VITE_ANTHROPIC_API_KEY in .env and restart the server.')
-      }
     } finally {
       setLoading(false)
     }
